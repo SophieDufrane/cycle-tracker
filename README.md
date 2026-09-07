@@ -108,3 +108,48 @@ In **core/urls.py**:
 
 - Import `include` alongside `path`
 - Add a route delegating a prefix (e.g. `api/`) to the app's urls: `path('api/', include('<your_app_name>.urls'))`
+
+### 8. Production Deployment (Scaleway Serverless)
+
+From **backend**:
+
+- Create a `Dockerfile` and a `.dockerignore` file (see templates)
+
+Follow these steps to deploy the backend architecture once local development is finalized:
+
+#### A. Database Provisioning (PostgreSQL)
+
+- In Scaleway Console, go to **Databases** (left menu) -> **Serverless SQL**.
+- Click **Create Database** and configure:
+  - **Region**: `Paris (fr-par)`
+  - **Engine version**: `PostgreSQL-16` (or latest)
+  - **Autoscaling thresholds**: Set **Minimum vCPU** to `0` (for scale-to-zero € when inactive) and **Maximum vCPU** to `1` (strict budget ceiling).
+  - **Database name**: `<your_app_name>-db`
+- Click **Create Database**. Once ready, click **Connect** -> **Generate API Key** (set expiration to 1 Year).
+- Copy the complete **Connection String** (`postgresql://...`) and save it securely in a temporary notepad.
+
+#### B. Production Namespace & Environment Variables
+
+- Go to **Serverless Compute** (left menu) -> **Containers**.
+- Click **Create a Namespace** (the secure global folder for your apps) and configure:
+  - **Name**: `portfolio-backend` (or a generic studio name)
+  - **Region**: `Paris (fr-par)`
+- Scroll down to the **Environment Variables** section and safely add these 3 variables without any quotes or brackets:
+  - `SECRET_KEY` = (Your production Django secret key string)
+  - `DEBUG` = `False`
+  - `DATABASE_URL` = (The complete PostgreSQL connection string from your notepad)
+- Click **Create namespace and add container**.
+
+#### C. Deploying the Quickstart Container Shell
+
+- On the next screen (**Deploy a Container**), select the **Quickstart image** tab (Simple Hello World container).
+- Configure the container options:
+  - **Container name**: `<your_app_name>-api`
+  - **Port**: `8080` (matches your Dockerfile exposure)
+- Under **Resources**, optimize your budget by selecting the minimum values:
+  - **CPU**: `100 m vCPU` (or lowest available)
+  - **Memory**: `256 MB` (perfect balance to run Django without crashing)
+- Under **Autoscaling**, strict-bind your scale thresholds:
+  - **minimum**: `1` (keeps 1 instance active for instant recruiter responses)
+  - **maximum**: `1` (prevents duplication costs)
+- Click **Deploy container**. Once the status icon turns **Green (Ready)**, go to the **Overview** tab and copy your public **Endpoint URL** to verify it responds in the browser.
