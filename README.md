@@ -52,6 +52,9 @@ From _backend_:
 - Create your local environmental file: create a `.env` file at the root of the **backend** folder. Add `DEBUG=True`, then copy the automatically generated `SECRET_KEY` from the fresh `core/settings.py` and paste it here.
 - Overwrite **core/settings.py**: replace the entire content of the generated file with your **universal settings.py template** (pre-configured for DRF, CORS, WhiteNoise, Token Auth, and Hybrid SQLite/PostgreSQL database).
 - In **settings.py** -> `INSTALLED_APPS`: add `<your_app_name>` to the list
+  - _NOTE_: In `core/settings.py`, the `REST_FRAMEWORK` configuration is wrapped inside an `if DEBUG:` block.
+    - In **Local Development** (`DEBUG=True`), permissions are automatically set to `AllowAny` to bypass token restrictions and easily audit calculations directly inside your browser.
+    - In **Production** (`DEBUG=False`), strict `TokenAuthentication` and `IsAuthenticated` permissions are enforced to secure the endpoints.
 
 ### 3. Models
 
