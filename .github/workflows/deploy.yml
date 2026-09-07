@@ -24,15 +24,7 @@ jobs:
           default-project-id: ${{ secrets.SCW_PROJECT_ID }}
           default-organization-id: ""
 
-      # 3. GitHub installs the Scaleway Container CLI plugin required for deployment
-      - name: Install Scaleway Container CLI plugin
-        run: |
-          scw --version
-          apt-get update && apt-get install -y curl
-          # Download and install the official Scaleway CLI tool
-          curl -s https://githubusercontent.com | sh
-
-      # 4. Authenticate, build the image, and push it to Scaleway Container Registry
+      # 3. Authenticate, build the image, and push it to Scaleway Container Registry
       - name: Build and Push Docker Image to Scaleway Registry
         run: |
           # Log into the remote Scaleway Container Registry using the secret key
@@ -44,7 +36,7 @@ jobs:
           # Push the compiled container box to Scaleway servers
           docker push rg.fr-par.scw.cloud/soso-studio-backend/cycle-calculator-api:latest
 
-      # 5. Trigger the cloud update to replace the Hello World with your Django code
+      # 4. Trigger the cloud update to replace the Hello World with your Django code
       - name: Deploy Container to Serverless
         run: |
           # Command to instruct Scaleway to reload your container image and refresh the live API
