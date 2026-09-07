@@ -45,9 +45,12 @@ From _backend_:
 
 ### 2. Set Up Backend - Django
 
-- From **backend** : start the django project `django-admin startproject core .` (_core_ = project name, the trailing `.` avoids an extra nested folder)
+From _backend_:
+
+- Start the django project `django-admin startproject core .` (_core_ = project name, the trailing `.` avoids an extra nested folder)
 - Create Django App `python manage.py startapp <your_app_name>`
-- In **settings.py**: replace the entire content with your **universal settings.py template** (pre-configured for DRF, CORS, WhiteNoise, Token Auth, and Hybrid SQLite/PostgreSQL database)
+- Create your local environmental file: create a `.env` file at the root of the **backend** folder. Add `DEBUG=True`, then copy the automatically generated `SECRET_KEY` from the fresh `core/settings.py` and paste it here.
+- Overwrite **core/settings.py**: replace the entire content of the generated file with your **universal settings.py template** (pre-configured for DRF, CORS, WhiteNoise, Token Auth, and Hybrid SQLite/PostgreSQL database).
 - In **settings.py** -> `INSTALLED_APPS`: add `<your_app_name>` to the list
 
 ### 3. Models
