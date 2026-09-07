@@ -40,4 +40,4 @@ jobs:
       - name: Deploy Container to Serverless
         run: |
           # Command to instruct Scaleway to reload your container image and refresh the live API
-          scw container container deploy cycle-calculator-api region=fr-par
+          scw container container deploy 7efabda8-52a3-46fa-bc18-435dccf8824a --region fr-par
