@@ -52,18 +52,18 @@ From _backend_:
 
 ### 3. Models
 
+- **ERD, Design principles**: Only store raw, immutable user inputs in the database to keep the database light and accurate.
 - In **models.py**, define the app's models (fields, relationships, and any custom logic like `save()` overrides)
 - From **backend**: prepare the migration files `python manage.py makemigrations`, then apply them `python manage.py migrate`
   - _NOTE_: until the final database is configured in **settings.py**, Django uses SQLite by default
   - _NOTE_: re-run `makemigrations` + `migrate` every time you add or change a model field
-- From **admin.py**: register each model so it appears in the admin panel (`@admin.register(...)`) — migrating alone isn't enough
 
 ### 4. Admin Panel
 
-- From **backend**: create superuser credentials `python manage.py createsuperuser` with username and password
-- To run the app: `python manage.py runserver`
-- To access the admin panel, append `/admin` to the http address
-- Testing phase: from the admin panel, create sample entries and check that fields (including calculated ones) display as expected
+- In **admin.py**: register each model using `@admin.register(ModelName)` so they appear in the Django admin interface.
+- From **backend**: create superuser `python manage.py createsuperuser` with credentials details (username and password)
+- Run the local development server: `python manage.py runserver`
+- Access the interface by appending `/admin` to the http address, to test creating, reading, and updating sample database entries manually.
 
 ### 5. Create Heroku app and database
 

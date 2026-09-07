@@ -8,3 +8,10 @@ class CycleLog(models.Model):
 
     def __str__(self):
         return f"Log de {self.user.username} - {self.start_date}"
+
+class CycleConfig(models.Model):
+    key = models.CharField(max_length=50, unique=True)
+    value = models.IntegerField()
+
+    def __str__(self):
+        return f"{self.key}: {self.value}"
