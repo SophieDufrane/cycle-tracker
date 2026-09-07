@@ -1,0 +1,51 @@
+name: Deploy to Scaleway Serverless Containers
+
+# Trigger the automation every time code is pushed to the main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. GitHub clones the source code from your repository
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      # 2. GitHub authenticates with Scaleway using your repository secrets
+      - name: Set up Scaleway CLI
+        uses: scaleway/action-scw@v0
+        with:
+          access-key: ${{ secrets.SCW_ACCESS_KEY }}
+          secret-key: ${{ secrets.SCW_SECRET_KEY }}
+          default-project-id: ${{ secrets.SCW_PROJECT_ID }}
+          default-organization-id: ""
+
+      # 3. GitHub installs the Scaleway Container CLI plugin required for deployment
+      - name: Install Scaleway Container CLI plugin
+        run: |
+          scw --version
+          apt-get update && apt-get install -y curl
+          # Download and install the official Scaleway CLI tool
+          curl -s https://githubusercontent.com | sh
+
+      # 4. Authenticate, build the image, and push it to Scaleway Container Registry
+      - name: Build and Push Docker Image to Scaleway Registry
+        run: |
+          # Log into the remote Scaleway Container Registry using the secret key
+          docker login rg.fr-par.scw.cloud -u nologin -p "${{ secrets.SCW_SECRET_KEY }}"
+
+          # Build the Docker container locally on GitHub runners using your Dockerfile
+          docker build -t rg.fr-par.scw.cloud/soso-studio-backend/cycle-calculator-api:latest ./backend
+
+          # Push the compiled container box to Scaleway servers
+          docker push rg.fr-par.scw.cloud/soso-studio-backend/cycle-calculator-api:latest
+
+      # 5. Trigger the cloud update to replace the Hello World with your Django code
+      - name: Deploy Container to Serverless
+        run: |
+          # Command to instruct Scaleway to reload your container image and refresh the live API
+          scw container container deploy cycle-calculator-api --region fr-par
