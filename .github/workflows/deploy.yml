@@ -1,6 +1,5 @@
 name: Deploy to Scaleway Serverless Containers
 
-# Trigger the automation every time code is pushed to the main branch
 on:
   push:
     branches:
@@ -11,34 +10,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. GitHub clones the source code from your repository
+      # Step 1: Clone your project repository code into the runner
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      # 2. GitHub authenticates with Scaleway using your repository secrets
-      - name: Set up Scaleway CLI
-        uses: scaleway/action-scw@v0
-        with:
-          access-key: ${{ secrets.SCW_ACCESS_KEY }}
-          secret-key: ${{ secrets.SCW_SECRET_KEY }}
-          default-project-id: ${{ secrets.SCW_PROJECT_ID }}
-          default-organization-id: ""
-
-      # 3. Authenticate, build the image, and push it to Scaleway Container Registry
-      - name: Build and Push Docker Image to Scaleway Registry
+      # Step 2: Build the Docker image locally and push it to the Scaleway Container Registry
+      - name: Build and Push Docker Image
         run: |
-          # Log into the remote Scaleway Container Registry using the secret key
           docker login rg.fr-par.scw.cloud -u nologin -p "${{ secrets.SCW_SECRET_KEY }}"
-
-          # Build the Docker container locally on GitHub runners using your Dockerfile
           docker build -t rg.fr-par.scw.cloud/soso-studio-backend/cycle-calculator-api:latest ./backend
-
-          # Push the compiled container box to Scaleway servers
           docker push rg.fr-par.scw.cloud/soso-studio-backend/cycle-calculator-api:latest
 
-      # 4. Trigger the cloud update using Scaleway's official deploy action (No more terminal command bugs)
-      - name: Deploy Container to Serverless
-        uses: scaleway/action-scw-container-deploy@v1
-        with:
-          container-id: "7efabda8-52a3-46fa-bc18-435dccf8824a"
-          region: "fr-par"
+      # Step 3: Automatically fetch the Container ID and trigger the deployment via Scaleway API
+      - name: Deploy to Scaleway Serverless
+        run: |
+          echo "🔍 Fetching container ID..."
+
+          # 1. Dynamically retrieve the Container ID based on its exact name
+          CONTAINER_ID=$(curl --silent \
+            --header "X-Auth-Token: ${{ secrets.SCW_SECRET_KEY }}" \
+            "https://scaleway.com" \
+            | jq -r '.containers[0].id')
+
+          if [ "$CONTAINER_ID" = "null" ] || [ -z "$CONTAINER_ID" ]; then
+            echo "❌ Error: Could not find any container named 'cycle-calculator-api' on Scaleway."
+            exit 1
+          fi
+
+          echo "✅ Container found (ID: $CONTAINER_ID). Triggering redeployment..."
+
+          # 2. Trigger the redeployment via the official endpoint using the POST method
+          curl --silent --fail --show-error --request POST \
+            --header "X-Auth-Token: ${{ secrets.SCW_SECRET_KEY }}" \
+            --header "Content-Type: application/json" \
+            "https://scaleway.com"
