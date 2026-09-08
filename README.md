@@ -27,9 +27,9 @@ TrackMate
 
 - Create the repo on github (with default _.gitignore_ for Python)
 - Clone the repo on VS Code git clone https://github.com...git
-- Create the projet structure with 2 folders: _backend_ and _frontend_
+- Create the projet structure with 2 folders: **backend** and **frontend**
 
-From _backend_:
+From **backend**:
 
 - Create virtual environment `python -m venv venv` and activate it `source venv/Scripts/activate` (commands on bash)
 - Install packages; one command line: `pip install django djangorestframework python-dotenv django-cors-headers gunicorn whitenoise dj-database-url "psycopg[binary]"`
@@ -45,7 +45,7 @@ From _backend_:
 
 ### 2. Set Up Backend - Django
 
-From _backend_:
+From **backend**:
 
 - Start the django project `django-admin startproject core .` (_core_ = project name, the trailing `.` avoids an extra nested folder)
 - Create Django App `python manage.py startapp <your_app_name>`
@@ -75,7 +75,7 @@ From _backend_:
 
 Serializers convert Python model objects into JSON (and validate JSON back into Python data) so the API can exchange data with a frontend.
 
-From **backend/your_app_name**, create **serializers.py**.
+From **backend/your_app_name**, create **serializers.py**
 
 - Import `serializers` from `rest_framework` and your models.
 - Create a serializer class inheriting from `serializers.ModelSerializer`.
@@ -97,7 +97,7 @@ From **backend/your_app_name**, in **views.py**:
 
 URLs map incoming requests to the right view. A router auto-generates all the standard routes (list, detail, create, update, delete) for each ViewSet.
 
-From **backend/your_app_name**, create the file `urls.py`:
+From **backend/your_app_name**, create **urls.py**
 
 - At the top of the file, import `DefaultRouter` from `rest_framework.routers` and the relevant ViewSets
 - Create a router instance, then `register()` each ViewSet under a URL prefix
@@ -111,45 +111,78 @@ In **core/urls.py**:
 
 ### 8. Production Deployment (Scaleway Serverless)
 
-From **backend**:
-
-- Create a `Dockerfile` and a `.dockerignore` file (see templates)
+From **backend**, create 2 files: `Dockerfile` and a `.dockerignore`. For the content of each file, use the template.
 
 Follow these steps to deploy the backend architecture once local development is finalized:
 
 #### A. Database Provisioning (PostgreSQL)
 
-- In Scaleway Console, go to **Databases** (left menu) -> **Serverless SQL**.
+- In Scaleway Console, go to **Databases** (left menu) -> **Serverless SQL**
 - Click **Create Database** and configure:
   - **Region**: `Paris (fr-par)`
-  - **Engine version**: `PostgreSQL-16` (or latest)
-  - **Autoscaling thresholds**: Set **Minimum vCPU** to `0` (for scale-to-zero € when inactive) and **Maximum vCPU** to `1` (strict budget ceiling).
-  - **Database name**: `<your_app_name>-db`
-- Click **Create Database**. Once ready, click **Connect** -> **Generate API Key** (set expiration to 1 Year).
-- Copy the complete **Connection String** (`postgresql://...`) and save it securely in a temporary notepad.
+  - **Default engine version**: `PostgreSQL-16` (or latest)
+  - **Configure database autoscaling**: optimize your budget by selecting **Minimum vCPU** to `0` (for scale-to-zero € when inactive) and **Maximum vCPU** to `1` (strict budget ceiling)
+  - **Database Instance name**: `<your_app_name>-db`
+- Click **Create Database**
+- Once ready, click **Connect** -> **Generate API Key** (set expiration to 1 Year).
+- Copy the complete **Connection String** (`postgresql://...`) and save it securely for step B.
 
 #### B. Production Namespace & Environment Variables
 
-- Go to **Serverless Compute** (left menu) -> **Containers**.
+- Go to **Serverless Compute** (left menu) -> **Containers**
 - Click **Create a Namespace** (the secure global folder for your apps) and configure:
-  - **Name**: `portfolio-backend` (or a generic studio name)
+  - **Namespace name**: `portfolio-backend` (or a generic studio name)
   - **Region**: `Paris (fr-par)`
-- Scroll down to the **Environment Variables** section and safely add these 3 variables without any quotes or brackets:
-  - `SECRET_KEY` = (Your production Django secret key string)
-  - `DEBUG` = `False`
-  - `DATABASE_URL` = (The complete PostgreSQL connection string from your notepad)
-- Click **Create namespace and add container**.
+- Open **Advanced Options** to access the **Environment Variables** section. Add these 3 variables without any quotes or brackets:
+  - `SECRET_KEY` = (Your production Django secret key available in .env)
+  - `DEBUG` = `False` (exact casing matters — `settings.py` does a strict string comparison)
+  - `DATABASE_URL` = (the connection string from step A)
+- Click **Create namespace and add container**
 
 #### C. Deploying the Quickstart Container Shell
 
-- On the next screen (**Deploy a Container**), select the **Quickstart image** tab (Simple Hello World container).
+- Click **Deploy a Container** and select **Quickstart image** (Simple Hello World container)
 - Configure the container options:
   - **Container name**: `<your_app_name>-api`
-  - **Port**: `8080` (matches your Dockerfile exposure)
-- Under **Resources**, optimize your budget by selecting the minimum values:
-  - **CPU**: `100 m vCPU` (or lowest available)
-  - **Memory**: `256 MB` (perfect balance to run Django without crashing)
+  - **Resources**, optimize your budget by selecting the minimum values:
+    - **CPU**: `100 m vCPU` (or lowest available)
+    - **Memory**: `256 MB` (perfect balance to run Django without crashing)
 - Under **Autoscaling**, strict-bind your scale thresholds:
   - **minimum**: `1` (keeps 1 instance active for instant recruiter responses)
   - **maximum**: `1` (prevents duplication costs)
-- Click **Deploy container**. Once the status icon turns **Green (Ready)**, go to the **Overview** tab and copy your public **Endpoint URL** to verify it responds in the browser.
+- Click **Deploy container**
+- Once the status icon turns **Green (Ready)**, go to the **Overview** and open the public **Container endpoint** to verify it responds in the browser
+
+#### D. GitHub Repository Secrets
+
+- On Scaleway, retrieve two values:
+  - **Container ID**: Serverless → Containers → your container → **Overview** → `Container ID`
+  - **Secret Key** (reusable across all projects in the same Scaleway Organization): Console → top-right menu → **IAM & API keys** → **API keys** → select the key named **github-actions-deploy** (create it once via **Generate API key** if it doesn't exist yet, then reuse it for every future project)
+
+- On GitHub, go to your repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, and add:
+  - `SCW_SECRET_KEY` = (the Secret Key above) — authenticates every Scaleway API call
+  - `SCW_CONTAINER_ID` = (the Container ID above) — target of the deployment
+
+#### E. Container Registry Setup
+
+- Go to **Containers** (left menu) → **Container Registry**.
+- A namespace is usually created automatically the first time you push an image, but you can also create one manually: **Create namespace**, name it to match your Serverless Containers namespace (e.g. `<studio-name>-backend`), region `Paris (fr-par)`.
+- On **Overview**, copy the **Registry endpoint**: `rg.fr-par.scw.cloud/<namespace-name>/<your-app-name>-api`
+
+#### F. GitHub Actions Workflow
+
+From the project root (same level as folders backend and fronted), create a new structure with 2 folders and a file `.github/workflows/deploy.yml`
+For the content of **deploy.yml**, use the template and adjust the `IMAGE` path to match your project:  
+`env:`  
+ `IMAGE: rg.fr-par.scw.cloud/<registry-namespace>/<container-name>:${{ github.sha }}`
+
+Replace `<registry-namespace>` with your Container Registry namespace (step E) and `<container-name>` with your Serverless container's name (step C). Everything else in the workflow stays identical across projects
+
+The workflow builds the Docker image, pushes it to the Registry, then calls the Scaleway API to redeploy the container with the new image. It runs automatically on every push to `main`
+
+#### H. Verifying the Deployment
+
+- On GitHub, check the **Actions** tab: the workflow run should complete with a green checkmark
+- On Scaleway, go to the container's **Overview** tab: status should read **Ready** (it briefly shows **Updating** during redeploy)
+- Visit the public **Endpoint URL** + `/admin/` in a browser
+- Since `DEBUG=False` enforces `TokenAuthentication` + `IsAuthenticated`, API endpoints won't respond to a plain browser visit. Test them with `curl` or Postman, passing `Authorization: Token <your-token>`
