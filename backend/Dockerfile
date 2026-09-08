@@ -15,5 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 5. Copy the entire Django application source code into the container
 COPY . /app/
 
-# 6. Production command to launch Gunicorn (Scaleway serverless requires port 8080)
+# 6. Collect static files so whitenoise can serve them in production
+RUN python manage.py collectstatic --noinput
+
+# 7. Production command to launch Gunicorn (Scaleway serverless requires port 8080)
 CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8080"]
