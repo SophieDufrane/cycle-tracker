@@ -111,9 +111,9 @@ In **core/urls.py**:
 
 ### 8. Production Deployment (Scaleway Serverless)
 
-From **backend**, create 2 files: `Dockerfile` and a `.dockerignore`. For the content of each file, use the template.
+From **backend**, create 3 mandatory configuration files: `Dockerfile`, `init_db.py`, and a `.dockerignore`. For the content of each file, copy the blueprints provided in the project template directory.
 
-Follow these steps to deploy the backend architecture once local development is finalized:
+Follow these steps to deploy and initialize the backend architecture once local development is finalized:
 
 #### A. Database Provisioning (PostgreSQL)
 
@@ -133,29 +133,34 @@ Follow these steps to deploy the backend architecture once local development is 
 - Click **Create a Namespace** (the secure global folder for your apps) and configure:
   - **Namespace name**: `portfolio-backend` (or a generic studio name)
   - **Region**: `Paris (fr-par)`
-- Open **Advanced Options** to access the **Environment Variables** section. Add these 3 variables without any quotes or brackets:
+- Expand **Advanced Options** to access the **Environment Variables** section. Add these 4 initial variables (without quotes, brackets, or spaces):
   - `SECRET_KEY` = (Your production Django secret key available in .env)
   - `DEBUG` = `False` (exact casing matters — `settings.py` does a strict string comparison)
   - `DATABASE_URL` = (the connection string from step A)
+  - `DJANGO_SUPERUSER_PASSWORD` = (A strong password used by the container on startup to provision your admin account)
 - Click **Create namespace and add container**
 
 #### C. Deploying the Quickstart Container Shell
 
 - Click **Deploy a Container** and select **Quickstart image** (Simple Hello World container)
-- Configure the container options:
+- Configure the container parameters to match the lowest cost tier:
   - **Container name**: `<your_app_name>-api`
   - **Resources**, optimize your budget by selecting the minimum values:
     - **CPU**: `100 m vCPU` (or lowest available)
     - **Memory**: `256 MB` (perfect balance to run Django without crashing)
-- Under **Autoscaling**, strict-bind your scale thresholds:
-  - **minimum**: `1` (keeps 1 instance active for instant recruiter responses)
-  - **maximum**: `1` (prevents duplication costs)
+  - **Autoscaling**, strict-bind your scale thresholds:
+    - **minimum**: `1` (keeps 1 instance active for instant responses)
+    - **maximum**: `1` (prevents unexpected duplication costs)
 - Click **Deploy container**
-- Once the status icon turns **Green (Ready)**, go to the **Overview** and open the public **Container endpoint** to verify it responds in the browser
+
+- Once the status icon turns **Green (Ready)**, open the **Overview** tab and copy the public **Container endpoint** URL.
+- **CRITICAL SECURITY STEP:** Go back to the **Environment Variables** tab of your container, and append one final variable:
+  - `SCW_CONTAINER_URL` = (Paste the complete public endpoint URL you just copied)
+    _This variable allows Django's dynamic `ALLOWED_HOSTS` configuration to automatically whitelist the container domain, securing it against Host Header Injection attacks._
 
 #### D. GitHub Repository Secrets
 
-- On Scaleway, retrieve two values:
+- On Scaleway, retrieve 2 deployment keys:
   - **Container ID**: Serverless → Containers → your container → **Overview** → `Container ID`
   - **Secret Key** (reusable across all projects in the same Scaleway Organization): Console → top-right menu → **IAM & API keys** → **API keys** → select the key named **github-actions-deploy** (create it once via **Generate API key** if it doesn't exist yet, then reuse it for every future project)
 
@@ -165,24 +170,40 @@ Follow these steps to deploy the backend architecture once local development is 
 
 #### E. Container Registry Setup
 
-- Go to **Containers** (left menu) → **Container Registry**.
-- A namespace is usually created automatically the first time you push an image, but you can also create one manually: **Create namespace**, name it to match your Serverless Containers namespace (e.g. `<studio-name>-backend`), region `Paris (fr-par)`.
-- On **Overview**, copy the **Registry endpoint**: `rg.fr-par.scw.cloud/<namespace-name>/<your-app-name>-api`
+- Go to **Containers** (left menu) -> **Container Registry**.
+- Click **Create namespace**, name it to match your studio architecture (e.g., `<studio-name>-backend`), region `Paris (fr-par)`.
+- On the registry **Overview**, copy the **Registry endpoint**: `rg.fr-par.scw.cloud/<namespace-name>/<your-app-name>-api`
 
 #### F. GitHub Actions Workflow
 
-From the project root (same level as folders backend and fronted), create a new structure with 2 folders and a file `.github/workflows/deploy.yml`
-For the content of **deploy.yml**, use the template and adjust the `IMAGE` path to match your project:  
+From the project root (same level as folders backend and fronted), create a new structure with 2 folders and 1 file `.github/workflows/deploy.yml`
+For the content of **deploy.yml**, use the template and adjust the `IMAGE` path to match the project (line 8-9):  
 `env:`  
  `IMAGE: rg.fr-par.scw.cloud/<registry-namespace>/<container-name>:${{ github.sha }}`
 
-Replace `<registry-namespace>` with your Container Registry namespace (step E) and `<container-name>` with your Serverless container's name (step C). Everything else in the workflow stays identical across projects
+Replace `<registry-namespace>` with the Container Registry namespace (step E) and `<container-name>` with the Serverless container's name (step C). Everything else in the workflow stays identical across projects
 
 The workflow builds the Docker image, pushes it to the Registry, then calls the Scaleway API to redeploy the container with the new image. It runs automatically on every push to `main`
 
-#### H. Verifying the Deployment
+#### H. Verifying and Testing the Secure Endpoints
 
-- On GitHub, check the **Actions** tab: the workflow run should complete with a green checkmark
-- On Scaleway, go to the container's **Overview** tab: status should read **Ready** (it briefly shows **Updating** during redeploy)
-- Visit the public **Endpoint URL** + `/admin/` in a browser
-- Since `DEBUG=False` enforces `TokenAuthentication` + `IsAuthenticated`, API endpoints won't respond to a plain browser visit. Test them with `curl` or Postman, passing `Authorization: Token <your-token>`
+1. **Verify Django Admin Access:**
+   Visit your public **Endpoint URL** + `/admin/` in a browser. Log in using the username `admin` and the password saved in **Environment Variables** in Scaleway
+2. **Generate your Production Auth Token:**
+   Inside the Django Admin panel, navigate to **Auth Token -> Tokens** in the left menu. Click **Add Token**, link it to the `admin` user, and click **Save**. Copy the generated long alphanumeric string.
+
+3. **Simulate API Requests via Scaleway:**
+   Since `DEBUG=False` enforces token validation, visiting API paths in a browser will return a `401 Unauthorized` status. To test them safely without local SSL conflicts, use Scaleway's internal testing suite:
+   - Go to your container dashboard on Scaleway -> open the **Test** tab.
+   - Set **Method** to `GET` and change the **Path** to: `/api/<your-page>/`
+   - Click **+ Advanced options** to expand the **HTTP Headers** grid.
+   - Add a header with **Key:** `Authorization` and **Value:** `Token <your_generated_auth_token>` _(Ensure there is a single space between the keyword `Token` and your alphanumeric hash)_.
+   - Copy the generated command (e.g., `curl -X GET ...`).
+   - In your terminal, paste and execute the command. The system should successfully bypass the security gates and return a `200 OK` status accompanied by an empty JSON array `[]`.
+
+## Specific to each project
+
+`SECRET_KEY`: Get the unique key in **settings.py** before replacing the whole file with the template, then use it:
+
+- In **.env**
+- In Scaleway -> Container -> **Environment variables**
