@@ -1,5 +1,6 @@
 import os
 import django
+from pathlib import Path
 
 # Set up the Django environment settings profile
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
@@ -28,6 +29,18 @@ def init_production():
             print(f"Superuser '{username}' already exists.")
     else:
         print("Skipping superuser creation: DJANGO_SUPERUSER_PASSWORD environment variable not set.")
+
+    # 3. Automatically load cycles fixtures if the file exists
+    fixture_file = Path(__file__).parent / 'cycles_fixture.json'
+    if fixture_file.exists():
+        print("Found local data fixture. Importing to production database...")
+        try:
+            call_command('loaddata', 'cycles_fixture.json')
+            print("Data imported successfully!")
+        except Exception as e:
+            print(f"Error importing fixture: {e}")
+    else:
+        print("No data fixture found to import.")
 
 if __name__ == '__main__':
     init_production()

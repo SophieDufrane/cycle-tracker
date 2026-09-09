@@ -1,0 +1,72 @@
+[
+{
+    "model": "cycles.cyclelog",
+    "pk": 1,
+    "fields": {
+        "user": 1,
+        "start_date": "2026-08-20",
+        "period_duration": 5
+    }
+},
+{
+    "model": "cycles.cyclelog",
+    "pk": 2,
+    "fields": {
+        "user": 1,
+        "start_date": "2026-07-17",
+        "period_duration": 5
+    }
+},
+{
+    "model": "cycles.cyclelog",
+    "pk": 3,
+    "fields": {
+        "user": 1,
+        "start_date": "2026-06-20",
+        "period_duration": 5
+    }
+},
+{
+    "model": "cycles.cyclelog",
+    "pk": 4,
+    "fields": {
+        "user": 1,
+        "start_date": "2026-05-21",
+        "period_duration": 5
+    }
+},
+{
+    "model": "cycles.cyclelog",
+    "pk": 5,
+    "fields": {
+        "user": 1,
+        "start_date": "2026-04-24",
+        "period_duration": 5
+    }
+},
+{
+    "model": "cycles.cyclelog",
+    "pk": 6,
+    "fields": {
+        "user": 1,
+        "start_date": "2026-03-23",
+        "period_duration": 5
+    }
+},
+{
+    "model": "cycles.cycleconfig",
+    "pk": 1,
+    "fields": {
+        "key": "luteale_duration",
+        "value": 14
+    }
+},
+{
+    "model": "cycles.cycleconfig",
+    "pk": 2,
+    "fields": {
+        "key": "ovulation_duration",
+        "value": 2
+    }
+}
+]
