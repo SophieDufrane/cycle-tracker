@@ -3,21 +3,41 @@ from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
 
+# ==============================================================================
+# 1. PATHS AND ENVIRONMENT LOADING
+# ==============================================================================
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables from a local .env file if present
 load_dotenv()
 
+# ==============================================================================
+# 2. SECURITY CONFIGURATION
+# ==============================================================================
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'template-fallback-unsafe-key-never-use-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# Converts the environment string 'True' or 'False' into a Python Boolean
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']  # Configured to accept all hosts for serverless environment flexibility
+# Dynamic allowed hosts to prevent Host Header Injection attacks
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
-# Application definition
+# Automatically append the Scaleway public URL if provided in environment variables
+SCW_URL = os.environ.get('SCW_CONTAINER_URL')
+if SCW_URL:
+    # Extracts the clean domain name (e.g., "my-api.functions.fnc.fr-par.scw.cloud")
+    clean_domain = SCW_URL.replace("https://", "").replace("http://", "").split("/")[0]
+    ALLOWED_HOSTS.append(clean_domain)
+elif not DEBUG:
+    # Fallback to wildcard ONLY if we forgot to set the environment variable in production
+    ALLOWED_HOSTS = ['*']
+
+# ==============================================================================
+# 3. APPLICATION DEFINITION
+# ==============================================================================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -66,7 +86,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Database Configuration
+# ==============================================================================
+# 4. DATABASE CONFIGURATION
+# ==============================================================================
 # Automatically switches between local SQLite and Production PostgreSQL via environment variable
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
@@ -82,7 +104,9 @@ else:
         }
     }
 
-# Password validation
+# ==============================================================================
+# 5. PASSWORD VALIDATION & INTERNATIONALIZATION
+# ==============================================================================
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -98,24 +122,24 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# ==============================================================================
+# 6. STATIC FILES MANAGEMENT
+# ==============================================================================
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# REST Framework configuration adapted for easy local development
+# ==============================================================================
+# 7. DJANGO REST FRAMEWORK CONFIGURATION
+# ==============================================================================
 if DEBUG:
     # LOCAL DEVELOPMENT: Allow public access without tokens for easy browser testing
     REST_FRAMEWORK = {
@@ -134,5 +158,21 @@ else:
         ],
     }
 
-# CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = True  # Allowed for development flexibility (restrict this in strict production)
+# ==============================================================================
+# 8. CORS (CROSS-ORIGIN RESOURCE SHARING) CONFIGURATION
+# ==============================================================================
+if DEBUG:
+    # Allow all connections for local frontend development flexibility
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    # Secure setup: block all origins except your verified frontend domains
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000", # Allows local frontend to communicate with production API
+        "http://127.0.0.1:3000",
+    ]
+    
+    # Dynamically append your production frontend URL (Vercel, Scaleway, etc.) if provided
+    FRONTEND_URL = os.environ.get('FRONTEND_URL')
+    if FRONTEND_URL:
+        CORS_ALLOWED_ORIGINS.append(FRONTEND_URL)
