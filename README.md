@@ -202,12 +202,22 @@ The workflow builds the Docker image, pushes it to the Registry, then calls the 
 
 3. **Simulate API Requests via Scaleway:**
    Since `DEBUG=False` enforces token validation, visiting API paths in a browser will return a `401 Unauthorized` status. To test them safely without local SSL conflicts, use Scaleway's internal testing suite:
+
+   **Scenario A: Testing Data Retrieval (GET Request)**
    - Go to your container dashboard on Scaleway -> open the **Test** tab.
-   - Set **Method** to `GET` and change the **Path** to: `/api/<your-page>/`
+   - Set **Method** to `GET` and change the **Path** to: `api/cycle-log/`
    - Click **+ Advanced options** to expand the **HTTP Headers** grid.
    - Add a header with **Key:** `Authorization` and **Value:** `Token <your_generated_auth_token>` _(Ensure there is a single space between the keyword `Token` and your alphanumeric hash)_.
    - Copy the generated command (e.g., `curl -X GET ...`).
-   - In your terminal, paste and execute the command. The system should successfully bypass the security gates and return a `200 OK` status accompanied by an empty JSON array `[]`.
+   - In your terminal, paste and execute the command. The system should successfully bypass the security gates and return a `200 OK` status accompanied by your data or an array `[]`.
+
+   **Scenario B: Testing Data Creation (POST Request)**
+   - Inside the same **Test** tab, change the **Method** to `POST`.
+   - Keep the **Path** as: `api/cycle-log/`
+   - Under **+ Advanced options**, keep your `Authorization` header and add a second header with **Key:** `Content-Type` and **Value:** `application/json` _(Mandatory for POST)_.
+   - In the **Body** text area, paste your raw JSON payload (e.g., `{"user": 1, "start_date": "2026-09-09", "period_duration": 5}`).
+   - Copy the generated command (e.g., `curl -X POST ...`).
+   - In your terminal, paste and execute the command. The system should return a `201 Created` status along with the newly created entry and its new database `id`.
 
 ## Specific to each project
 
