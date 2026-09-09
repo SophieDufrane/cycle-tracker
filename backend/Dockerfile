@@ -18,5 +18,5 @@ COPY . /app/
 # 6. Collect static files so whitenoise can serve them in production
 RUN python manage.py collectstatic --noinput
 
-# 7. Production command to launch Gunicorn (Scaleway serverless requires port 8080)
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8080"]
+# 7. Migrate database, create superuser, and launch Gunicorn (Scaleway serverless requires port 8080)
+CMD python init_db.py && gunicorn core.wsgi:application --bind 0.0.0.0:8080
