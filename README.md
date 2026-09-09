@@ -109,9 +109,17 @@ In **core/urls.py**:
 - Import `include` alongside `path`
 - Add a route delegating a prefix (e.g. `api/`) to the app's urls: `path('api/', include('<your_app_name>.urls'))`
 
-### 8. Production Deployment (Scaleway Serverless)
+## 8. Production Deployment (Scaleway Serverless)
 
-From **backend**, create 3 mandatory configuration files: `Dockerfile`, `init_db.py`, and a `.dockerignore`. For the content of each file, copy the blueprints provided in the project template directory.
+From the **backend** folder, create 3 mandatory configuration files: `Dockerfile`, `init_db.py`, and a `.dockerignore`.
+
+_(Optional)_ If you want to migrate your local data (SQLite3) to your production database, run the following command from the **backend** folder before deploying:
+
+```bash
+python manage.py dumpdata cycles --indent 4 --output cycles_fixture.json
+```
+
+_The `init_db.py` script is designed to automatically detect this `cycles_fixture.json` file and inject its content into the production PostgreSQL database upon container startup._
 
 Follow these steps to deploy and initialize the backend architecture once local development is finalized:
 
