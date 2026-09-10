@@ -16,24 +16,17 @@ load_dotenv()
 # 2. SECURITY CONFIGURATION
 # ==============================================================================
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'template-fallback-unsafe-key-never-use-in-production')
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# Converts the environment string 'True' or 'False' into a Python Boolean
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = 'DEBUG' in os.environ
 
 # Dynamic allowed hosts to prevent Host Header Injection attacks
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-
-# Automatically append the Scaleway public URL if provided in environment variables
-SCW_URL = os.environ.get('SCW_CONTAINER_URL')
-if SCW_URL:
-    # Extracts the clean domain name (e.g., "my-api.functions.fnc.fr-par.scw.cloud")
-    clean_domain = SCW_URL.replace("https://", "").replace("http://", "").split("/")[0]
-    ALLOWED_HOSTS.append(clean_domain)
-elif not DEBUG:
-    # Fallback to wildcard ONLY if we forgot to set the environment variable in production
-    ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    os.environ.get('ALLOWED_HOST'),
+    'localhost',
+    '127.0.0.1',
+]
 
 # ==============================================================================
 # 3. APPLICATION DEFINITION
