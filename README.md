@@ -181,7 +181,16 @@ Follow these steps to deploy and initialize the backend architecture once local 
 - Click **Create namespace**, name it to match your studio architecture (e.g., `<studio-name>-backend`), region `Paris (fr-par)`.
 - On the registry **Overview**, copy the **Registry endpoint**: `rg.fr-par.scw.cloud/<namespace-name>/<your-app-name>-api`
 
-#### F. GitHub Actions Workflow
+#### F. Testing the Docker Build Locally
+
+Before pushing to `main` (which triggers the CI/CD build), test the Docker build locally with Docker Desktop installed. This is especially useful after changes to the `Dockerfile`, `requirements.txt`, or `manage.py`-related code.
+
+1. From `backend`, build the image: `docker build -t cycle-tracker-test .`
+2. Run it, providing the minimum required environment variables: `docker run -p 8080:8080 -e DEBUG=1 -e SECRET_KEY=test-local-key cycle-tracker-test`
+3. Visit `http://localhost:8080/admin/` in a browser to confirm the app starts correctly.
+4. Stop the container with `Ctrl+C`, then remove the test image if needed:
+
+#### G. GitHub Actions Workflow
 
 From the project root (same level as folders backend and fronted), create a new structure with 2 folders and 1 file `.github/workflows/deploy.yml`
 For the content of **deploy.yml**, use the template and adjust the `IMAGE` path to match the project (line 8-9):  
@@ -220,18 +229,19 @@ The workflow builds the Docker image, pushes it to the Registry, then calls the 
    - In **Body**, paste your JSON payload (e.g., `{"user": 1, "start_date": "2026-09-09", "period_duration": 5}`).
    - Copy the generated `curl` command and run it in your terminal. Expect `201 Created` with the new entry and its `id`.
 
-## Specific to each project
+#### I. Applying Database Migrations to Production
 
-`SECRET_KEY`: Get the unique key in **settings.py** before replacing the whole file with the template, then use it:
-
-- In **.env**
-- In Scaleway -> Container -> **Environment variables**
+1. Run `python manage.py makemigrations` and `python manage.py migrate` locally, commit and push the migration file.
+2. Copy `DATABASE_URL` from the container's **Environment Variables** tab on Scaleway.
+3. Temporarily add `DATABASE_URL=<value>` to your local `.env`, then run `python manage.py migrate`.
+4. Remove `DATABASE_URL` from your `.env` immediately afterwards.
 
 ## Templates
 
 **settings**
 
 **.env**
+`SECRET_KEY`: Get the unique key in **settings.py** before replacing the whole file with the template, then use it in **.env** and in Scaleway -> Container -> **Environment variables**
 
 **requirements**
 
@@ -248,7 +258,6 @@ The workflow builds the Docker image, pushes it to the Registry, then calls the 
 Adjust the `IMAGE` path to match the project (line 8-9):  
 `env:`  
  `IMAGE: rg.fr-par.scw.cloud/<registry-namespace>/<container-name>:${{ github.sha }}`
-
 Replace `<registry-namespace>` with the Container Registry namespace (step E) and `<container-name>` with the Serverless container's name (step C). Everything else in the workflow stays identical across projects
 
 ## Documentation:
