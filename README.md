@@ -31,7 +31,7 @@ TrackMate
 
 From **backend**:
 
-- Create virtual environment `python -m venv venv` and activate it `source venv/Scripts/activate` (commands on bash)
+- Create virtual environment `py -<VERSION e.g. 3.13> -m venv venv` (Windows, forces the exact Python version via the `py` launcher when multiple versions are installed) and activate it `source venv/Scripts/activate` (commands on bash)
 - Install packages; one command line: `pip install django djangorestframework python-dotenv django-cors-headers gunicorn whitenoise dj-database-url "psycopg[binary]"`
   - **Django** -> to build the site's backend (pages, database, admin panel) - after installation, to see the version `django-admin --version`
   - **djangorestframework** -> lets Django return JSON data instead of HTML pages, so the TypeScript frontend can read it
@@ -143,7 +143,6 @@ Follow these steps to deploy and initialize the backend architecture once local 
   - **Region**: `Paris (fr-par)`
 - Expand **Advanced Options** to access the **Environment Variables** section. Add these 4 initial variables (without quotes, brackets, or spaces):
   - `SECRET_KEY` = (Your production Django secret key available in .env)
-  - `DEBUG` = `False` (exact casing matters — `settings.py` does a strict string comparison)
   - `DATABASE_URL` = (the connection string from step A)
   - `DJANGO_SUPERUSER_PASSWORD` = (A strong password used by the container on startup to provision your admin account)
 - Click **Create namespace and add container**
@@ -163,8 +162,8 @@ Follow these steps to deploy and initialize the backend architecture once local 
 
 - Once the status icon turns **Green (Ready)**, open the **Overview** tab and copy the public **Container endpoint** URL.
 - **CRITICAL SECURITY STEP:** Go back to the **Environment Variables** tab of your container, and append one final variable:
-  - `SCW_CONTAINER_URL` = (Paste the complete public endpoint URL you just copied)
-    _This variable allows Django's dynamic `ALLOWED_HOSTS` configuration to automatically whitelist the container domain, securing it against Host Header Injection attacks._
+  - `ALLOWED_HOST` = (The domain only, no `https://` and no trailing slash — e.g. `my-api.functions.fnc.fr-par.scw.cloud`)
+    _This variable populates Django's `ALLOWED_HOSTS` setting, protecting the app against Host Header Injection attacks._
 
 #### D. GitHub Repository Secrets
 
@@ -193,31 +192,33 @@ Replace `<registry-namespace>` with the Container Registry namespace (step E) an
 
 The workflow builds the Docker image, pushes it to the Registry, then calls the Scaleway API to redeploy the container with the new image. It runs automatically on every push to `main`
 
-#### H. Verifying and Testing the Secure Endpoints
+#### H. Creating a Superuser and Testing the Secure Endpoints
 
-1. **Verify Django Admin Access:**
-   Visit your public **Endpoint URL** + `/admin/` in a browser. Log in using the username `admin` and the password saved in **Environment Variables** in Scaleway
-2. **Generate your Production Auth Token:**
-   Inside the Django Admin panel, navigate to **Auth Token -> Tokens** in the left menu. Click **Add Token**, link it to the `admin` user, and click **Save**. Copy the generated long alphanumeric string.
+1. **Create the production superuser:**
+   - Copy the `DATABASE_URL` value from the container's **Environment Variables** tab on Scaleway.
+   - In your local `.env` file, temporarily add: `DATABASE_URL=<paste the value here>`
+   - Run `python manage.py createsuperuser` and follow the prompts.
+   - Remove this line from your `.env` file **immediately** afterwards.
 
-3. **Simulate API Requests via Scaleway:**
-   Since `DEBUG=False` enforces token validation, visiting API paths in a browser will return a `401 Unauthorized` status. To test them safely without local SSL conflicts, use Scaleway's internal testing suite:
+2. **Verify Django Admin Access:**
+   Visit your public **Endpoint URL** + `/admin/` and log in with the credentials you just created.
 
-   **Scenario A: Testing Data Retrieval (GET Request)**
-   - Go to your container dashboard on Scaleway -> open the **Test** tab.
-   - Set **Method** to `GET` and change the **Path** to: `api/cycle-log/`
-   - Click **+ Advanced options** to expand the **HTTP Headers** grid.
-   - Add a header with **Key:** `Authorization` and **Value:** `Token <your_generated_auth_token>` _(Ensure there is a single space between the keyword `Token` and your alphanumeric hash)_.
-   - Copy the generated command (e.g., `curl -X GET ...`).
-   - In your terminal, paste and execute the command. The system should successfully bypass the security gates and return a `200 OK` status accompanied by your data or an array `[]`.
+3. **Generate your Production Auth Token:**
+   In the Django Admin panel, go to **Auth Token -> Tokens**, click **Add Token**, link it to your superuser account, and click **Save**. Copy the generated string.
 
-   **Scenario B: Testing Data Creation (POST Request)**
-   - Inside the same **Test** tab, change the **Method** to `POST`.
-   - Keep the **Path** as: `api/cycle-log/`
-   - Under **+ Advanced options**, keep your `Authorization` header and add a second header with **Key:** `Content-Type` and **Value:** `application/json` _(Mandatory for POST)_.
-   - In the **Body** text area, paste your raw JSON payload (e.g., `{"user": 1, "start_date": "2026-09-09", "period_duration": 5}`).
-   - Copy the generated command (e.g., `curl -X POST ...`).
-   - In your terminal, paste and execute the command. The system should return a `201 Created` status along with the newly created entry and its new database `id`.
+4. **Test API requests via Scaleway's Test tab** (since `DEBUG=False` enforces token validation, direct browser visits return `401 Unauthorized`):
+
+   **Scenario A: GET Request**
+   - Go to your container dashboard -> **Test** tab.
+   - Set **Method** to `GET`, **Path** to `api/cycle-log/`.
+   - Under **+ Advanced options**, add header **Key:** `Authorization`, **Value:** `Token <your_generated_auth_token>`.
+   - Copy the generated `curl` command and run it in your terminal. Expect `200 OK` with your data or `[]`.
+
+   **Scenario B: POST Request**
+   - Change **Method** to `POST`, keep **Path** as `api/cycle-log/`.
+   - Keep the `Authorization` header, add **Key:** `Content-Type`, **Value:** `application/json`.
+   - In **Body**, paste your JSON payload (e.g., `{"user": 1, "start_date": "2026-09-09", "period_duration": 5}`).
+   - Copy the generated `curl` command and run it in your terminal. Expect `201 Created` with the new entry and its `id`.
 
 ## Specific to each project
 
@@ -225,3 +226,34 @@ The workflow builds the Docker image, pushes it to the Registry, then calls the 
 
 - In **.env**
 - In Scaleway -> Container -> **Environment variables**
+
+## Templates
+
+**settings**
+
+**.env**
+
+**requirements**
+
+**.gitignore**
+
+**Dockerfile**
+
+- Replace Python version (3-27-35)
+- Replace backend folder name **core** if renamed differently
+
+**.dockerignore**
+
+**deploy.yml**
+Adjust the `IMAGE` path to match the project (line 8-9):  
+`env:`  
+ `IMAGE: rg.fr-par.scw.cloud/<registry-namespace>/<container-name>:${{ github.sha }}`
+
+Replace `<registry-namespace>` with the Container Registry namespace (step E) and `<container-name>` with the Serverless container's name (step C). Everything else in the workflow stays identical across projects
+
+## Documentation:
+
+- Dockerfile ref: https://docs.docker.com/reference/dockerfile
+- How to use Scaleway Container Registry with GitHub Actions: https://www.scaleway.com/en/docs/tutorials/use-container-registry-github-actions/
+- Deploy Github repo on Scaleway: https://github.com/marketplace/actions/scaleway-container-deploy-action
+- Hosting a Django web app with Serverless Containers: https://www.scaleway.com/en/docs/tutorials/hosting-django-webapp-serverless-containers/?tab=windows-0
