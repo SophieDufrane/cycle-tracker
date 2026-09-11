@@ -49,6 +49,7 @@ From **backend**:
 
 - Start the django project `django-admin startproject core .` (_core_ = project name, the trailing `.` avoids an extra nested folder)
 - Create Django App `python manage.py startapp <your_app_name>`
+  - To Run the local development server: `python manage.py runserver`
 - Create your local environmental file: create a `.env` file at the root of the **backend** folder. Add `DEBUG=True`, then copy the automatically generated `SECRET_KEY` from the fresh `core/settings.py` and paste it here.
 - Overwrite **core/settings.py**: replace the entire content of the generated file with your **universal settings.py template** (pre-configured for DRF, CORS, WhiteNoise, Token Auth, and Hybrid SQLite/PostgreSQL database).
 - In **settings.py** -> `INSTALLED_APPS`: add `<your_app_name>` to the list
@@ -109,7 +110,7 @@ In **core/urls.py**:
 - Import `include` alongside `path`
 - Add a route delegating a prefix (e.g. `api/`) to the app's urls: `path('api/', include('<your_app_name>.urls'))`
 
-## 8. Production Deployment (Scaleway Serverless)
+### 8. Production Deployment (Scaleway Serverless)
 
 From the **backend** folder, create 3 mandatory configuration files: `Dockerfile`, `init_db.py`, and a `.dockerignore`.
 
@@ -236,12 +237,29 @@ The workflow builds the Docker image, pushes it to the Registry, then calls the 
 3. Temporarily add `DATABASE_URL=<value>` to your local `.env`, then run `python manage.py migrate`.
 4. Remove `DATABASE_URL` from your `.env` immediately afterwards.
 
+### 9. Set Up Frontend - Vite
+
+From **frontend**:
+
+- Create the Vite project `npm create vite@latest . -- --template react-ts` (the trailing `.` avoids an extra nested folder)
+  - Linter : **ESLint** (more mature ecosystem and React/TS-specific rules than Oxlint, better for learning)
+  - Install with npm and start now? **Y** (installs dependencies and starts dev server automatically)
+  - To run the local development server manually: `npm run dev`
+- From **src** create the structure with the following folders: `mkdir api components pages types hooks`
+- From **frontend** create file `.env.local` used in dev, not committed
+  - Add `VITE_API_URL=http://localhost:8000`
+  - _NOTE_: Vite's default `.gitignore` already covers this via the `*.local` pattern — no manual edit needed.
+  - _NOTE_: any variable exposed to frontend code **must** be prefixed `VITE_`, otherwise Vite won't expose it to the browser.
+
+---
+
 ## Templates
 
 **settings**
 
 **.env**
-`SECRET_KEY`: Get the unique key in **settings.py** before replacing the whole file with the template, then use it in **.env** and in Scaleway -> Container -> **Environment variables**
+`SECRET_KEY=<unique-django-project-key-listed-in-settings>`
+`DEBUG=True`
 
 **requirements**
 

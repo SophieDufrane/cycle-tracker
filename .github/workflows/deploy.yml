@@ -16,13 +16,18 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Log in to Scaleway Container Registry
-        run: echo "${{ secrets.SCW_SECRET_KEY }}" | docker login rg.fr-par.scw.cloud -u nologin --password-stdin
+      - name: Login to Scaleway Container Registry
+        uses: docker/login-action@v3
+        with:
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+          registry: rg.fr-par.scw.cloud
 
-      - name: Build and push Docker image
-        run: |
-          docker build -t "$IMAGE" ./backend
-          docker push "$IMAGE"
+      - name: Build the Docker image
+        run: docker build . -t "$IMAGE"
+
+      - name: Push the Docker image
+        run: docker push "$IMAGE"
 
       - name: Redeploy Scaleway container
         run: |
