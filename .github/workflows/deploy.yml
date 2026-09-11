@@ -24,7 +24,7 @@ jobs:
           registry: rg.fr-par.scw.cloud
 
       - name: Build the Docker image
-        run: docker build . -t "$IMAGE"
+        run: docker build ./backend -t "$IMAGE"
 
       - name: Push the Docker image
         run: docker push "$IMAGE"
